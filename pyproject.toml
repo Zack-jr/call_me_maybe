@@ -1,0 +1,7 @@
+[project]
+name="call_me_maybe"
+version="1.0"
+dependencies = [
+    "numpy>=2.2.6",
+    "pydantic>=2.13.4",
+]
