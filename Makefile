@@ -2,6 +2,8 @@
 all:
 	
 
+run:
+	uv run python3 -m src
 clean:
 	rm -rf __pycache__/
 
