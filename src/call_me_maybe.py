@@ -26,8 +26,41 @@ def load_prompts() -> list[str]:
         for dict in data:
             prompts.append(dict["prompt"])
 
-        print(prompts)
         return prompts
 
     except FileNotFoundError:
         raise("File does not exist")
+
+def format_functions() -> str:
+    """returns a list of formated string of the function_definitons"""
+
+    prompts = []
+    parts = []
+
+    functions = load_functions()
+
+    for func in functions:
+        
+        for name, type in func.parameters.items():
+            parts.append(f"{name}: {type.type}")
+        
+        arguments = ", ".join(parts)
+        parts.clear()
+        prompts.append(f"{func.name}({arguments}) -> {func.returns.type}: {func.description}\n")
+
+    return prompts
+
+def create_prompt(initial_prompt: str) -> str:
+
+    functions = format_functions()
+    final_prompt = "placeholder: \n"
+
+    for func in functions:
+        final_prompt += func
+    final_prompt += initial_prompt
+
+    return final_prompt
+    
+
+
+

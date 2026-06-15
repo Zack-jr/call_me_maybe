@@ -1,13 +1,15 @@
 from src.llm_sdk.llm_sdk import Small_LLM_Model
 from src.models.classes import FunctionDefinitions
-from src.call_me_maybe import load_functions, load_prompts
+from src.call_me_maybe import load_functions, load_prompts, format_functions, create_prompt
 import json
 
 
 def main():
 
     
-    load_prompts()
+
+    funcs = load_prompts()
+    print(create_prompt(funcs[0]))
 
     # THEORY/ STRUCTURE
     """

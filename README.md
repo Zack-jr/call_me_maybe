@@ -20,6 +20,7 @@ UNDERSTANDING THE PROJECT
 UNDERSTANDING THE LLM:
 
 
+hey_how_arey4ou
 
 The LLM analyzes a prompt, but instead of responding with text or concrete content, it only speaks in logits.
 The llm doesnt compute results, it only gives predictions on the next tokens.
