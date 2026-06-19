@@ -3,13 +3,13 @@ all:
 	
 
 run:
-	uv run python3 -m src
+	uv run --active python3 -m src
 clean:
 	rm -rf __pycache__/
 
 install:
 
 	uv venv ~/goinfre/.venv && \
-	uv sync --active --cache-dir ~/goinfre/call_me_maybe_cache
-	@echo 'Run: "source .venv/bin/activate" to access the virtual environment.'
+	@echo 'Run: "source .venv/bin/activate" to access the virtual environment.' \
+	@echo 'Run: "uv sync --active --cache-dir ~/goinfre/call_me_maybe_cache" to install cache and dependencies'
 
