@@ -67,12 +67,11 @@ def create_prompt(initial_prompt: str) -> str:
 
     return final_prompt
 
-def encode_function_names(functions: List[FunctionDefinitions]) -> Dict[str, Any]:
+def encode_function_names(functions: List[FunctionDefinitions], model: Small_LLM_Model) -> Dict[str, Any]:
     """creates a dict with the function names as keys and their corresponding
     encoded values as values"""
 
     encoding = {}
-    model = Small_LLM_Model()
 
     for f in functions:
         code = model.encode(f.name)
@@ -81,39 +80,56 @@ def encode_function_names(functions: List[FunctionDefinitions]) -> Dict[str, Any
 
     return encoding
 
-def get_valid_token_ids(current_tokens: list) -> list[int]:
-     
-    functions = load_functions()
-    encoded_function_names = encode_function_names(functions)
+def get_valid_token_ids(current_tokens: list, encoded_function_names: dict) -> list[int]:
 
-    
-    tokens = []
+    valid_tokens = []
+    for name in encoded_function_names.keys():
+        if encoded_function_names[name] == current_tokens:
+            continue
+
+        if encoded_function_names[name][:len(current_tokens)] == current_tokens:
+            valid_tokens.append(encoded_function_names[name][len(current_tokens)])
+
+    return valid_tokens
+# [12 34 234]
+# [12 143 513]
 
 
-
+# when appending fixed tokens to the input_ids -> no LLM call
+# otherwise -> llm call
 def run():
 
     model = Small_LLM_Model()
     prompts = load_prompts()
+    functions = load_functions()
 
     prefix1 = model.encode('{"name": "')[0].tolist()
     prefix3 = model.encode('": ')[0].tolist()
     prefix4 = model.encode(', "')[0].tolist()
     prefix6 = model.encode("}}")[0].tolist()
 
+    function_names = encode_function_names(functions, model)
+    current_tokens = []
+
     # get path for vocab file (str: ID)
     vocab_path = model.get_path_to_vocab_file()
     with open(vocab_path) as f:
         vocab = json.load(f)
 
+    # for every prompt
     for prompt in prompts:
+
+        # create a new prompt, append it to the input IDs
         re_prompt = create_prompt(prompt)
         input_IDs = model.encode(re_prompt)[0].tolist()
         input_IDs += prefix1
 
+
+        
         logits = model.get_logits_from_input_ids(input_IDs)
 
-        valid_input_IDS = get_valid_token_ids()
+
+        valid_input_IDS = get_valid_token_ids(input_IDs, function_names)
 
 
 
@@ -144,6 +160,4 @@ def run():
         print(res)
 
 """
-
-
 
