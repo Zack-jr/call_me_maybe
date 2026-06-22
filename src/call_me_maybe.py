@@ -103,38 +103,40 @@ def run():
     prompts = load_prompts()
     functions = load_functions()
 
-    prefix1 = model.encode('{"name": "')[0].tolist()
-    prefix3 = model.encode('": ')[0].tolist()
+    prefix = model.encode('{"name": "')[0].tolist()
+    bridge = model.encode('", "parameters": {"')[0].tolist()
     prefix4 = model.encode(', "')[0].tolist()
     prefix6 = model.encode("}}")[0].tolist()
 
     function_names = encode_function_names(functions, model)
-    current_tokens = []
 
-    # get path for vocab file (str: ID)
-    vocab_path = model.get_path_to_vocab_file()
-    with open(vocab_path) as f:
-        vocab = json.load(f)
 
     # for every prompt
     for prompt in prompts:
-
+        current_tokens = []
+    
         # create a new prompt, append it to the input IDs
         re_prompt = create_prompt(prompt)
         input_IDs = model.encode(re_prompt)[0].tolist()
-        input_IDs += prefix1
+        input_IDs += prefix
 
-
+        while current_tokens not in function_names.values():
+            logits = model.get_logits_from_input_ids(input_IDs)
+            valid_input_IDS = get_valid_token_ids(current_tokens, function_names)
+            logits = [value if i in valid_input_IDS else float('-inf') for i, value in enumerate(logits)]
+            max_log_index = logits.index(max(logits))
+            current_tokens.append(max_log_index)
+            input_IDs.append(max_log_index)
         
-        logits = model.get_logits_from_input_ids(input_IDs)
-
-
-        valid_input_IDS = get_valid_token_ids(input_IDs, function_names)
-
-
-
-
+        current_function_name = (key for key, value in function_names.items() if value == current_tokens)
+        input_IDs += bridge
     """
+
+    {"name": "fn_add_numbers", "parameters": {"a": 2.0, "b": 3.0}}
+
+
+
+
 
     # encode the prompt string and make it a list
     code = model.encode(prompt)
