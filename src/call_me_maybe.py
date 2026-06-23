@@ -1,5 +1,5 @@
 from src.llm_sdk.llm_sdk import Small_LLM_Model
-from src.models.classes import FunctionDefinitions
+from src.models.classes import FunctionDefinitions, DataType
 from typing import List, Dict, Any
 import json
 
@@ -94,6 +94,36 @@ def get_valid_token_ids(current_tokens: list, encoded_function_names: dict) -> l
 # [12 34 234]
 # [12 143 513]
 
+def get_parameter_format(function, model) -> list[Dict[int, bool]]:
+    """check the function's parameters to return
+    a dict with valid encoded character bridge and bool values
+    that would change the format"""
+    
+    counter = 1
+    param_count = len(function.parameters)
+    dict_list = []
+
+    for name, value in function.parameters.items():
+        param_data = {}
+
+        if value.type == "string":
+            param_data.update({"encoded_bridge": model.encode(f'{name}: "')[0].tolist()})
+            param_data.update({"is_string": True})
+
+        if value.type == "number":
+            param_data.update({"encoded_bridge": model.encode(f'{name}: ')[0].tolist()})
+            param_data.update({"is_string": False})
+        
+        if counter == param_count:
+            param_data.update({"is_last": True})
+        else:
+            param_data.update({"is_last": False})
+
+        dict_list.append(param_data)
+        counter += 1
+        
+
+    return dict_list
 
 # when appending fixed tokens to the input_ids -> no LLM call
 # otherwise -> llm call
@@ -128,8 +158,24 @@ def run():
             current_tokens.append(max_log_index)
             input_IDs.append(max_log_index)
         
-        current_function_name = (key for key, value in function_names.items() if value == current_tokens)
+        current_function_name = [key for key, value in function_names.items() if value == current_tokens][0]
         input_IDs += bridge
+        function = [func for func in functions if func.name == current_function_name][0]
+        parameters = get_parameter_format(function, model)
+
+        for param in parameters:
+    
+            input_IDs += param["encoded_bridge"]
+            if param["is_string"] == True:
+                input_IDS += model.encode()
+            if param["is_last"] == False:
+                pass
+
+
+
+
+
+
     """
 
     {"name": "fn_add_numbers", "parameters": {"a": 2.0, "b": 3.0}}
