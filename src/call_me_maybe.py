@@ -140,6 +140,11 @@ def run():
 
     function_names = encode_function_names(functions, model)
 
+    # reverse vocab
+    with open(model.get_path_to_vocab_file()) as f:
+        vocab = json.load(f)
+
+    vocab = {value: key for key, value in vocab.items()}
 
     # for every prompt
     for prompt in prompts:
@@ -163,13 +168,32 @@ def run():
         function = [func for func in functions if func.name == current_function_name][0]
         parameters = get_parameter_format(function, model)
 
+
+        # format the parameters section dynamically
         for param in parameters:
-    
+            parameter_tokens = []
             input_IDs += param["encoded_bridge"]
+
+            # argument name building
+            while True:
+    
+                logits = model.get_logits_from_input_ids(input_IDs)
+                if param["is_string"]:
+                        logits = [value if vocab.get(i, "") != '"' else float('-inf') for i, value in enumerate(logits)]
+                        max_log_index = logits.index(max(logits))
+
+                if not param["is_string"]:
+                    logits = [value if i in vocab[""]]
+            
+                parameter_tokens.append(max_log_index)
+                input_IDs.append(max_log_index)
+
             if param["is_string"] == True:
-                input_IDS += model.encode()
+                input_IDs += model.encode('"')[0].tolist()
             if param["is_last"] == False:
-                pass
+                input_IDs += model.encode(", ")[0].tolist()
+            
+    
 
 
 
