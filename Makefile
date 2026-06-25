@@ -5,7 +5,7 @@ all:
 run:
 	uv run --active python3 -m src
 clean:
-	rm -rf __pycache__/
+	find . -type d -name __pycache__ -exec rm -rf {} +
 
 install:
 

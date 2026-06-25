@@ -107,11 +107,11 @@ def get_parameter_format(function, model) -> list[Dict[int, bool]]:
         param_data = {}
 
         if value.type == "string":
-            param_data.update({"encoded_bridge": model.encode(f'{name}: "')[0].tolist()})
+            param_data.update({"encoded_bridge": model.encode(f'"{name}": "')[0].tolist()})
             param_data.update({"is_string": True})
 
         if value.type == "number":
-            param_data.update({"encoded_bridge": model.encode(f'{name}: ')[0].tolist()})
+            param_data.update({"encoded_bridge": model.encode(f'"{name}": ')[0].tolist()})
             param_data.update({"is_string": False})
         
         if counter == param_count:
@@ -125,26 +125,29 @@ def get_parameter_format(function, model) -> list[Dict[int, bool]]:
 
     return dict_list
 
+def is_valid_number_token(token_str: str) -> bool:
+    try:
+        float(token_str)
+        return True
+    except Exception:
+        return False
+
 # when appending fixed tokens to the input_ids -> no LLM call
 # otherwise -> llm call
-def run():
+def generate_json_data(model, prompts, functions):
 
-    model = Small_LLM_Model()
-    prompts = load_prompts()
-    functions = load_functions()
-
-    prefix = model.encode('{"name": "')[0].tolist()
-    bridge = model.encode('", "parameters": {"')[0].tolist()
-    prefix4 = model.encode(', "')[0].tolist()
-    prefix6 = model.encode("}}")[0].tolist()
-
-    function_names = encode_function_names(functions, model)
 
     # reverse vocab
     with open(model.get_path_to_vocab_file()) as f:
         vocab = json.load(f)
 
     vocab = {value: key for key, value in vocab.items()}
+
+    prefix = model.encode('{"name": "')[0].tolist()
+    bridge = model.encode('", "parameters": {')[0].tolist()
+    closer = model.encode("}}")[0].tolist()
+    function_names = encode_function_names(functions, model)
+    results = []
 
     # for every prompt
     for prompt in prompts:
@@ -153,6 +156,7 @@ def run():
         # create a new prompt, append it to the input IDs
         re_prompt = create_prompt(prompt)
         input_IDs = model.encode(re_prompt)[0].tolist()
+        prompt_len = len(input_IDs)
         input_IDs += prefix
 
         while current_tokens not in function_names.values():
@@ -178,58 +182,53 @@ def run():
             while True:
     
                 logits = model.get_logits_from_input_ids(input_IDs)
-                if param["is_string"]:
-                        logits = [value if vocab.get(i, "") != '"' else float('-inf') for i, value in enumerate(logits)]
-                        max_log_index = logits.index(max(logits))
-
                 if not param["is_string"]:
-                    logits = [value if i in vocab[""]]
-            
+                    logits = [value if is_valid_number_token(vocab.get(i, "")) or vocab.get(i, "") in ",}" else float ('-inf') for i, value in enumerate(logits)]
+
+                max_log_index = logits.index(max(logits))
                 parameter_tokens.append(max_log_index)
                 input_IDs.append(max_log_index)
 
-            if param["is_string"] == True:
-                input_IDs += model.encode('"')[0].tolist()
+                if param["is_string"]:
+                    token_str = vocab.get(max_log_index, "")
+                    if '"' in token_str:
+                        quote_idx = token_str.index('"')
+                        clean_part = token_str[:quote_idx]
+                        if clean_part:
+                            input_IDs += model.encode(clean_part)[0].tolist()
+                    break
+                else:
+                    if vocab.get(max_log_index, "") in ",}":
+                        input_IDs.pop()
+                        parameter_tokens.pop()
+                        break
+
             if param["is_last"] == False:
                 input_IDs += model.encode(", ")[0].tolist()
-            
     
+        input_IDs += closer
+        generated = input_IDs[prompt_len:]
+        json_str = model.decode(generated)
+        print(json_str)
+        result = json.loads(json_str)
+        result["prompt"] = prompt
+        results.append(result)
+
+    return results
 
 
-
-
-
-
-    """
-
-    {"name": "fn_add_numbers", "parameters": {"a": 2.0, "b": 3.0}}
-
-
-
-
-
-    # encode the prompt string and make it a list
-    code = model.encode(prompt)
-    input = code[0].tolist()
-
+def write_json_data(json_data: List[Dict[str, Any]]):
     
-   # token = [key for key, value in vocab.items() if key == "{"]
-   # print(vocab[token[0]])
-   # print(token)
+    with open('data/output/function_calling_results.json', 'w') as f:
+        json.dump(json_data, f)
+    print("working")
 
 
-    for _ in range(50):
+def run():
 
-        logits = model.get_logits_from_input_ids(input)
+    model = Small_LLM_Model()
+    prompts = load_prompts()
+    functions = load_functions()
 
-        # "mask", or "filter"
-        logits = [value if i == 90 else float('-inf') for i, value in enumerate(logits)]
-    
-        max_log_index = logits.index(max(logits))
-
-        res = [key for key, value in vocab.items() if value == max_log_index]
-        #input.append(logits.index(max_log_index))
-        print(res)
-
-"""
-
+    json_data = generate_json_data(model, prompts, functions)
+    write_json_data(json_data)
