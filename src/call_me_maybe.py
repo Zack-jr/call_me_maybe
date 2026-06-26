@@ -194,9 +194,11 @@ def generate_json_data(model, prompts, functions):
                     if '"' in token_str:
                         quote_idx = token_str.index('"')
                         clean_part = token_str[:quote_idx]
+                        input_IDs.pop()
                         if clean_part:
                             input_IDs += model.encode(clean_part)[0].tolist()
-                    break
+                        input_IDs += model.encode('"')[0].tolist()
+                        break
                 else:
                     if vocab.get(max_log_index, "") in ",}":
                         input_IDs.pop()
@@ -220,7 +222,7 @@ def generate_json_data(model, prompts, functions):
 def write_json_data(json_data: List[Dict[str, Any]]):
     
     with open('data/output/function_calling_results.json', 'w') as f:
-        json.dump(json_data, f)
+        json.dump(json_data, f, indent=2)
     print("working")
 
 
