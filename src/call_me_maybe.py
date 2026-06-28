@@ -49,7 +49,7 @@ def format_functions() -> str:
         
         arguments = ", ".join(parts)
         parts.clear()
-        prompts.append(f"{func.name}({arguments}) -> {func.returns.type}: {func.description}\n")
+        prompts.append(f"{func.name}({arguments}) -> {func.returns.type} - description: {func.description}\n")
 
     return prompts
 
@@ -132,6 +132,16 @@ def is_valid_number_token(token_str: str) -> bool:
     except Exception:
         return False
 
+def convert_to_float(parameters: dict):
+
+    for key, value in parameters.items():
+        try:
+            if isinstance(parameters[key], int):
+                parameters[key] = float(value)
+        except Exception:
+            continue
+    return parameters
+
 # when appending fixed tokens to the input_ids -> no LLM call
 # otherwise -> llm call
 def generate_json_data(model, prompts, functions):
@@ -192,9 +202,11 @@ def generate_json_data(model, prompts, functions):
                 if param["is_string"]:
                     token_str = vocab.get(max_log_index, "")
                     if '"' in token_str:
-                        quote_idx = token_str.index('"')
-                        clean_part = token_str[:quote_idx]
+                        #double_quote_index = token_str.index['"']
+                        clean_part = token_str[:(token_str.index('"'))]
                         input_IDs.pop()
+                        if any(c in clean_part for c in '{},"'):
+                            clean_part = ""
                         if clean_part:
                             input_IDs += model.encode(clean_part)[0].tolist()
                         input_IDs += model.encode('"')[0].tolist()
@@ -207,13 +219,12 @@ def generate_json_data(model, prompts, functions):
 
             if param["is_last"] == False:
                 input_IDs += model.encode(", ")[0].tolist()
-    
         input_IDs += closer
         generated = input_IDs[prompt_len:]
         json_str = model.decode(generated)
-        print(json_str)
         result = json.loads(json_str)
-        result["prompt"] = prompt
+        result = {"prompt": prompt, "name": result["name"], "parameters": result["parameters"]}
+        result["parameters"] = convert_to_float(result["parameters"])
         results.append(result)
 
     return results
@@ -223,7 +234,7 @@ def write_json_data(json_data: List[Dict[str, Any]]):
     
     with open('data/output/function_calling_results.json', 'w') as f:
         json.dump(json_data, f, indent=2)
-    print("working")
+
 
 
 def run():
