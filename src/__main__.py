@@ -1,7 +1,7 @@
 from src.call_me_maybe import run
 
 
-def main():
+def main() -> None:
     try:
         run()
     except Exception as e:

@@ -1,8 +1,10 @@
-from typing import Any, Dict
+from typing import Dict
 from pydantic import BaseModel
+
 
 class DataType(BaseModel):
     type: str = ""
+
 
 class FunctionDefinitions(BaseModel):
     name: str = ""
