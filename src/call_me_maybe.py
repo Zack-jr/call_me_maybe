@@ -2,13 +2,14 @@ from src.llm_sdk.llm_sdk import Small_LLM_Model
 from src.models.classes import FunctionDefinitions, DataType
 from typing import List, Dict, Any
 import json
+import argparse
 
-def load_functions() -> list[FunctionDefinitions]:
+def load_functions(path) -> list[FunctionDefinitions]:
     """loads the json file to return a list of FunctionDefinitions"""
 
     functions = []
     try:
-        with open('data/input/functions_definition.json') as file:
+        with open(path) as file:
             data = json.load(file)
 
             for dict in data:
@@ -18,12 +19,12 @@ def load_functions() -> list[FunctionDefinitions]:
         raise("File does not exist")
     
 
-def load_prompts() -> list[str]:
+def load_prompts(path) -> list[str]:
     """loads the json file to return a list of prompt strings"""
 
     prompts = []
     try:
-        with open('data/input/function_calling_tests.json') as file:
+        with open(path) as file:
             data = json.load(file)
         
         for dict in data:
@@ -34,13 +35,11 @@ def load_prompts() -> list[str]:
     except FileNotFoundError:
         raise("File does not exist")
 
-def format_functions() -> str:
+def format_functions(functions: List[FunctionDefinitions]) -> str:
     """returns a list of formated string of the function_definitons"""
 
     prompts = []
     parts = []
-
-    functions = load_functions()
 
     for func in functions:
         
@@ -53,11 +52,11 @@ def format_functions() -> str:
 
     return prompts
 
-def create_prompt(initial_prompt: str) -> str:
+def create_prompt(initial_prompt: str, unformated_functions) -> str:
     """Creates a prompt containing the formatted functions definitions
     , some instructions and the initial prompt. Returns a new prompt string."""
 
-    functions = format_functions()
+    functions = format_functions(unformated_functions)
     final_prompt = ("Given the user's request and the list of available functions"
     ", determine which function applies and what argument values to use. \n")
 
@@ -164,7 +163,7 @@ def generate_json_data(model, prompts, functions):
         current_tokens = []
     
         # create a new prompt, append it to the input IDs
-        re_prompt = create_prompt(prompt)
+        re_prompt = create_prompt(prompt, functions)
         input_IDs = model.encode(re_prompt)[0].tolist()
         prompt_len = len(input_IDs)
         input_IDs += prefix
@@ -230,18 +229,31 @@ def generate_json_data(model, prompts, functions):
     return results
 
 
-def write_json_data(json_data: List[Dict[str, Any]]):
+def write_json_data(json_data: List[Dict[str, Any]], path):
     
-    with open('data/output/function_calling_results.json', 'w') as f:
+    with open(path, 'w') as f:
         json.dump(json_data, f, indent=2)
 
 
 
 def run():
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--function_definition", default="data/input/functions_definition.json")
+    parser.add_argument("--input", default="data/input/function_calling_tests.json")
+    parser.add_argument("--output", default="data/output/function_calling_results.json")
+
+
+    args = parser.parse_args()
+
+    if not args.function_definition.endswith(".json") or not args.input.endswith(".json") or not args.output.endswith(".json"):
+        raise ValueError("Please provide valid files and arguments.")
+
     model = Small_LLM_Model()
-    prompts = load_prompts()
-    functions = load_functions()
+    prompts = load_prompts(args.input)
+    functions = load_functions(args.function_definition)
 
     json_data = generate_json_data(model, prompts, functions)
-    write_json_data(json_data)
+    write_json_data(json_data, args.output)
+

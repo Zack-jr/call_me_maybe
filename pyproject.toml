@@ -3,6 +3,8 @@ name="call_me_maybe"
 version="1.0"
 dependencies = [
     "numpy>=2.2.6",
+    "mypy",
+    "flake8",
     "pydantic>=2.13.4",
     "llm-sdk",
     "torch>=2.12.0",
