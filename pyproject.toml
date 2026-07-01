@@ -12,4 +12,4 @@ dependencies = [
 ]
 
 [tool.mypy]
-exclude = "src/llm_sdk"
+exclude = ["src/llm_sdk"]

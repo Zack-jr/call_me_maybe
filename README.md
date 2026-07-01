@@ -5,7 +5,27 @@
 ## Description
 
 
+    In this project, I am creating a function calling tool that translates natural language
+prompts into structured function calls. 
+    My program reads from JSON input files, one containing prompts, the other one containing
+    the stucture of the available functions and outputs a set of JSON data with the initial prompt,
+    arguments ; anything requirement that composes a valid function.
+
+    I use the LLM provided by the subject to decode the inputs, get the logits (statistics) and build the
+    JSON structure that is demanded.
+
+    The output will be created at the specified path, or in data/output/ by default.
+    
+
 ## Instructions
+
+    To run this program, you should provide two JSON files:
+        - one containing the prompts (human language)
+        - the other one with the structure of functions
+    
+    The output will be created at the specified path.
+
+
 
 ### Installation
 
@@ -18,58 +38,127 @@ make install
 ```
 Do not forget to access the environment with:
 ```bash
-source env/bin/activate
+source ~/goinfre/.venv/bin/activate
 ```
+Then run:
+```bash
+    uv sync --active --cache-dir ~/goinfre/call_me_maybe_cache
+```
+to install the project cache and dependencies.
 
-### Running
+
+### Example usage
 
 ```bash
-python3 fly-in.py <path_to_map.txt>
-```
-
-Example:
-```bash
-python3 fly-in.py maps/easy/01_linear_path.txt
+uv run python -m src [--functions_definition <function_definition_file>] [--input <input_file>] [--
+output <output_file>]
 ```
 
 ### Available Makefile targets
 
-- `make install` — install dependencies in a venv
-- `make run` — run on a sample map
+- `make install` — create venv
+- `make run` — run the program with provided files
 - `make debug` — run with Python debugger
 - `make clean` — remove caches and temporary files
 - `make lint` — check code style with flake8 and types with mypy
-- `make invalid` — runs a set of invalid maps for parsing check (if provided)
-- `make easy` / `make medium` / `make hard` / `make challenger` — run all maps of a difficulty level
 
 ## Algorithm and Implementation Strategy
 
 
+    For this project, I first had to go through a lot of theory. Understanding how a LLM model functions
+    was a bit tricky at first. I decided to go through the LLM class provided in the subject, and I tried out multiple
+    methods that were provided in order to understand the data generation pipeline.
+
+    In my call_me_maybe.py, i am creating many helpers to facilitate context building and constrained decoding.
+    The main logic appears in my main loop inside generate_json_data(). The main idea is to keep reprompting the LLM
+    with as much context as possible for a model of this size, recieve the logits to then manipulate them using constrained decoding.
+    Using that logic, i can ensure my program generates a valid string that contains only the needed characters for the json format.
+    The key concept is to seperate "fixed" parts of the ouput's structure, to only prompt the llm when the key word is dynamic.
+
+    I make sure to keep track of the input_IDs generated so far, so that they can be decoded later on, then dumped using json.dump() inside
+    the json output file.
+
+
+## Design decisions
+
+    I used Pydantic' BaseModel (as required in the subject) to ensure a valid structure for the functions that we are passing
+    to the program via the JSON file.
+
+    I decided to function with "variable" and "fixed" parts to build my json structure.
+    It allows me to prompt the LLM in scenarios where i really need it.  I keep the prompts for the
+    variable parts, such as function names, and parameter values.
+
+    I still make sure to give the full context at every iteration, so the JSON keeps on building.
+
+## Performance Analysis
+
+    This program provides a pretty accurate output, even when prompted vague inputs, or incoherent function structures.
+    The program usually takes up to two minutes to generate the output, depending on the machines, and the number of prompts as well.
+
+    It easily achieves an accuracy of 90+ %.
+
+
+## Challenges faced
+
+    The main challenge for this assignment was the theory behind LLMs and how to manage them properly. It wasn't an easy or motivating task at
+    the beggining, but it became manageable after some time.
+
+    The other difficult thing was trying to understand "what's a token" within a string of characters. That whole token concept made
+    the constrained decoding more challenging.
+
+## Testing strategy
+
+    I first debugged a lot with print statements inside my loops in order to spot different kind of issues.
+    For the tests, i tweaked the input files to challenge my program with different kinds of prompts and function structures.
+    I also checked for missing files.
+    Surprisingly, the output was very accurate quite fast.
 
 ## Resources
 
 ### Documentation
-- [Dijkstra's algorithm](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm)
-- [Python heapq module](https://docs.python.org/3/library/heapq.html)
-- [Explanations on Graph theory](https://www.youtube.com/watch?v=4jyESQDrpls)
+    Here is the youtube link of a video that helped me understand the concept of LLMs: https://www.youtube.com/watch?v=LPZh9BOjkQs .
 
 ### AI Usage
 AI was used during this project as a learning aid for:
-- Discussing algorithmic concepts (Dijkstra, path penalization, multi-agent coordination)
-- Debugging complex turn-based simulation logic
-- Suggesting Python idioms and OOP design patterns
-- Code review and identifying bugs
+
+- explaining new concepts
+- debugging complex loops
+- suggesting new tools and teaching me about new tools
+- code review and identifying bugs
 
 I used Claude AI's project feature during this project. Here's the content
 of the "instructions" section.
 
-"The project i am working on is there for educational purposes, I must work on this assignment while learning new things. I will need guidance on most algorithmic notions and on ways to approach problems I haven't seen before. You should not give me direct answers but rather lead me to them.  I should ideally figure things out by myself, but you should be able to help me build a concrete structure while still helping me follow the 42 school pedagogy. You should ask me some questions often enough to make sure I don't skip key notions. You should not give me code, or if you do, only in the form of pseudocode. You should be as strict as possible in order for me to learn."
+"I am a student at 42 School.
+The purpose of this project is educational: I must understand concepts deeply and learn how to solve problems independently.
+
+Your role is to act as a strict technical mentor following the 42 pedagogy.
+
+Guidelines:
+
+- Do not give me direct solutions or complete code.
+- Prefer questions, hints, step-by-step reasoning, and guided decomposition.
+- If code is absolutely necessary, only provide minimal pseudocode or isolated examples unrelated to the final solution.
+- Help me understand why something works, not only how.
+- Encourage debugging methodology instead of fixing problems for me directly.
+- When I ask about an algorithm or implementation, first ask me about my current understanding or approach before guiding me further.
+- Push me to explain my reasoning, edge cases, data structures, complexity choices, and tradeoffs.
+- If my approach is weak or incorrect, do not immediately correct it. Instead, guide me toward discovering the issue myself.
+- Frequently ask checkpoint questions to ensure I understand key concepts before continuing.
+- Break difficult problems into smaller conceptual steps without solving them entirely.
+- Prioritize learning problem-solving patterns over completing the assignment quickly.
+- Assume I may be missing foundational concepts and help me identify them.
+- Be strict about clean thinking, project structure, debugging discipline, and algorithmic rigor.
+- Do not optimize for speed; optimize for learning and autonomy.
+- Avoid giving “copy-pasteable” answers.
+- Encourage me to test hypotheses, reason about failures, and verify assumptions.
+- When relevant, remind me of constraints common in 42 projects: memory management, norm compliance, edge cases, undefined behavior, leaks, complexity, and maintainability.
+
+Your goal is to help me become capable of solving similar problems independently in the future."
 
 
 All code was written and validated by me. AI was used as a discussion partner rather 
 than a code generator.
-I first discussed the Fly-in with peers, trying to absorb different perspectives on a subject
-that wasn't approached in 42 before the change of common-core program.
 As the prompt just above suggests, I chose to use AI,  in a way that is compatible with 42's pedagogy,
 without leaving the peer to peer aspect aside. I now feel like this project taught me a lot, especially
 with workflow.
