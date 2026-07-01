@@ -3,6 +3,7 @@ from src.models.classes import FunctionDefinitions
 from typing import List, Dict, Any
 import json
 import argparse
+import os
 
 
 def load_functions(path: str) -> list[FunctionDefinitions]:
@@ -270,9 +271,10 @@ def generate_json_data(model: Small_LLM_Model, prompts: List[str],
     return results
 
 
-def write_json_data(json_data: List[Dict[str, Any]], path) -> None:
+def write_json_data(json_data: List[Dict[str, Any]], path: str) -> None:
     """dumps the valid built dicts into specified json file"""
 
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         json.dump(json_data, f, indent=2)
 

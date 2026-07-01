@@ -2,6 +2,7 @@ from src.call_me_maybe import run
 
 
 def main() -> None:
+    """runs the program"""
     try:
         run()
     except Exception as e:
