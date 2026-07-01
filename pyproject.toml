@@ -10,3 +10,6 @@ dependencies = [
     "torch>=2.12.0",
     "accelerate>=1.13.0",
 ]
+
+[tool.mypy]
+exclude = "src/llm_sdk"

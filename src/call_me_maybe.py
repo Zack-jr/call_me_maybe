@@ -18,7 +18,7 @@ def load_functions(path: str) -> list[FunctionDefinitions]:
                 functions.append(FunctionDefinitions.model_validate(dict))
         return (functions)
     except FileNotFoundError:
-        raise ("File does not exist")
+        raise ValueError("File does not exist")
 
 
 def load_prompts(path: str) -> list[str]:
@@ -35,10 +35,10 @@ def load_prompts(path: str) -> list[str]:
         return prompts
 
     except FileNotFoundError:
-        raise ("File does not exist")
+        raise ValueError("File does not exist")
 
 
-def format_functions(functions: List[FunctionDefinitions]) -> str:
+def format_functions(functions: List[FunctionDefinitions]) -> list[str]:
     """returns a list of formated string of the function_definitons"""
 
     formatted_functions = []
@@ -52,8 +52,8 @@ def format_functions(functions: List[FunctionDefinitions]) -> str:
         arguments = ", ".join(parts)
         parts.clear()
         formatted_functions.append(f"{func.name}({arguments})"
-                                   " -> {func.returns.type} -"
-                                   " description: {func.description}\n")
+                                   f" -> {func.returns.type} -"
+                                   f" description: {func.description}\n")
 
     return formatted_functions
 
@@ -84,14 +84,14 @@ def encode_function_names(functions: List[FunctionDefinitions],
 
     for f in functions:
         code = model.encode(f.name)
-        code = code[0].tolist()
-        encoding.update({f.name: code})
+        encoded = code[0].tolist()
+        encoding.update({f.name: encoded})
 
     return encoding
 
 
-def get_valid_token_ids(current_tokens: List[float],
-                        encoded_function_names: dict) -> List[float]:
+def get_valid_token_ids(current_tokens: List[int],
+                        encoded_function_names: dict) -> List[int]:
     """returns a list of valid tokens depending on the current_tokens"""
 
     valid_tokens = []
@@ -109,7 +109,7 @@ def get_valid_token_ids(current_tokens: List[float],
 
 
 def get_parameter_format(function: FunctionDefinitions,
-                         model: Small_LLM_Model) -> list[Dict[float, bool]]:
+                         model: Small_LLM_Model) -> list[Dict[str, Any]]:
     """takes a function and checks its parameters to return
     a dict with valid encoded character bridge and bool values
     that would change the format"""
@@ -119,7 +119,7 @@ def get_parameter_format(function: FunctionDefinitions,
     dict_list = []
 
     for name, value in function.parameters.items():
-        param_data = {}
+        param_data: dict[str, Any] = {}
 
         if value.type == "string":
             param_data.update(
@@ -167,8 +167,10 @@ def convert_to_float(parameters: dict) -> dict:
     return parameters
 
 
-def generate_json_data(model: Small_LLM_Model, prompts: List[str],
-                       functions: FunctionDefinitions) -> List[Dict[str, Any]]:
+def generate_json_data(model: Small_LLM_Model,
+                       prompts: List[str],
+                       functions: list[FunctionDefinitions]
+                       ) -> List[Dict[str, Any]]:
     """builds a list of dicts using the LLM, constrained decoding
     and - token checking."""
 
@@ -186,7 +188,7 @@ def generate_json_data(model: Small_LLM_Model, prompts: List[str],
 
     # for every prompt
     for prompt in prompts:
-        current_tokens = []
+        current_tokens: list[int] = []
 
         # create a new prompt, append it to the input IDs
         re_prompt = create_prompt(prompt, functions)

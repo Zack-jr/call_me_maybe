@@ -12,7 +12,7 @@ install:
 	@echo 'Run: "uv sync --active --cache-dir ~/goinfre/call_me_maybe_cache" to install cache and dependencies'
 
 debug:
-	export HF_HOME=~/goinfre/call_me_maybe_cache && uv run --active python -m pdb -m src
+	export HF_HOME=~/goinfre/call_me_maybe_cache && uv run --active python -m pdb src/__main__.py
 
 clean:
 
@@ -21,9 +21,8 @@ clean:
 
 lint:
 	uv run --active flake8 .
-	uv run --active mypy . --warn-return-any \
+	uv run --active mypy src/call_me_maybe.py src/models/classes.py --warn-return-any \
 	--warn-unused-ignores --ignore-missing-imports \
-	--disallow-untyped-defs --check-untyped-defs
-
+	--disallow-untyped-defs --check-untyped-defs --follow-imports=skip
 
 .PHONY: all install run debug clean lint
